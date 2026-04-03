@@ -54,7 +54,8 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 HAL_StatusTypeDef MPU6050_Init(void);
-HAL_StatusTypeDef Run_Sensor_Acquisition(void);
+/* Day6: frame_id increments each 10 ms Sensor tick — host CSV logger checks continuity */
+HAL_StatusTypeDef Run_Sensor_Acquisition(uint32_t frame_id);
 
 /* USER CODE END EFP */
 

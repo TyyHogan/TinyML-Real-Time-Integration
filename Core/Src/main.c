@@ -199,7 +199,8 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
-HAL_StatusTypeDef Run_Sensor_Acquisition(void) {
+/* Day6: UART CSV line — frame_id,ax,ay,az,gx,gy,gz,pot (one row per successful read) */
+HAL_StatusTypeDef Run_Sensor_Acquisition(uint32_t frame_id) {
     uint8_t imu_raw[14];
     int16_t ax, ay, az, gx, gy, gz;
     uint32_t adc_val = 0U;
@@ -225,8 +226,9 @@ HAL_StatusTypeDef Run_Sensor_Acquisition(void) {
     gy = (int16_t)((imu_raw[10] << 8) | imu_raw[11]);
     gz = (int16_t)((imu_raw[12] << 8) | imu_raw[13]);
 
-    printf("AX:%d AY:%d AZ:%d GX:%d GY:%d GZ:%d POT:%lu\r\n",
-           ax, ay, az, gx, gy, gz, (unsigned long)adc_val);
+    printf("%lu,%d,%d,%d,%d,%d,%d,%lu\r\n",
+           (unsigned long)frame_id, (int)ax, (int)ay, (int)az, (int)gx, (int)gy, (int)gz,
+           (unsigned long)adc_val);
     return HAL_OK;
 }
 

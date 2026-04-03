@@ -125,8 +125,10 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
+  /* Day6: monotonic frame_id every 10 ms tick — gaps in CSV = no row for that id (I2C drop or UART loss) */
   uint32_t next_wake_tick;
   uint32_t error_count = 0U;
+  uint32_t frame_id = 0U;
 
   if (MPU6050_Init() != HAL_OK) {
     printf("MPU6050 init failed\r\n");
@@ -136,10 +138,12 @@ void StartDefaultTask(void *argument)
 
   next_wake_tick = osKernelGetTickCount();
   for(;;) {
-    if (Run_Sensor_Acquisition() != HAL_OK) {
+    frame_id++;
+    if (Run_Sensor_Acquisition(frame_id) != HAL_OK) {
       error_count++;
       if ((error_count % 20U) == 0U) {
-        printf("Sensor read error x%lu\r\n", (unsigned long)error_count);
+        printf("Sensor read error x%lu (last frame_id=%lu)\r\n",
+               (unsigned long)error_count, (unsigned long)frame_id);
       }
     }
     next_wake_tick += 10U;

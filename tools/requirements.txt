@@ -1,0 +1,2 @@
+# Python serial logger dependency
+pyserial>=3.5
