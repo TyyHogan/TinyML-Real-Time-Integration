@@ -1,4 +1,3 @@
-# Day6: CSV logger for STM32 UART stream
 # Firmware line format (no header on wire): frame_id,ax,ay,az,gx,gy,gz,pot
 # Install: pip install -r tools/requirements.txt
 # Example: python tools/dataLogger.py --port COM5 --out data/idle.csv --seconds 30
@@ -36,7 +35,7 @@ class SessionStats:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Day6: log 100 Hz IMU+pot CSV from STM32 UART2"
+        description="Log 100 Hz IMU+pot CSV from STM32 UART2"
     )
     p.add_argument(
         "--port", required=True, help="Serial port (e.g. COM5 or /dev/ttyUSB0)"
@@ -75,7 +74,8 @@ def main() -> int:
                 continue
 
             frame_id = int(m.group(1))
-            row = [frame_id] + [int(m.group(i)) for i in range(2, 8)]
+            # Keep all 8 captured fields: frame_id + 6 IMU axes + pot
+            row = [frame_id] + [int(m.group(i)) for i in range(2, 9)]
 
             if stats.last_frame_id is not None:
                 d = u32_forward_delta(stats.last_frame_id, frame_id)
@@ -93,15 +93,15 @@ def main() -> int:
     expected = stats.rows_written + stats.frames_missing
     drop_rate = (stats.frames_missing / expected * 100.0) if expected else 0.0
 
-    print(f"[Day6] Wrote {stats.rows_written} rows to {args.out}", file=sys.stderr)
-    print(f"[Day6] Duration: {dt:.3f}s", file=sys.stderr)
+    print(f"Wrote {stats.rows_written} rows to {args.out}", file=sys.stderr)
+    print(f"Duration: {dt:.3f}s", file=sys.stderr)
     print(
-        f"[Day6] Missing frame_ids (gaps): {stats.frames_missing}",
+        f"Missing frame_ids (gaps): {stats.frames_missing}",
         file=sys.stderr,
     )
-    print(f"[Day6] Approx. gap rate: {drop_rate:.3f}%", file=sys.stderr)
-    print(f"[Day6] Skipped non-data lines: {stats.skipped_lines}", file=sys.stderr)
-    print(f"[Day6] Duplicate frame_ids: {stats.duplicate_count}", file=sys.stderr)
+    print(f"Approx. gap rate: {drop_rate:.3f}%", file=sys.stderr)
+    print(f"Skipped non-data lines: {stats.skipped_lines}", file=sys.stderr)
+    print(f"Duplicate frame_ids: {stats.duplicate_count}", file=sys.stderr)
     return 0
 
 
