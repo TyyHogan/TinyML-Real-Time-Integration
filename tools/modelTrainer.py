@@ -1,14 +1,36 @@
 from __future__ import annotations
 
+import argparse
+import csv
+import json
+from datetime import datetime
 from pathlib import Path
+import re
 
 import numpy as np
 import tensorflow as tf
+from sklearn.metrics import classification_report, confusion_matrix, f1_score
 
 
 DATA_DIR = Path("processedData")
 OUT_DIR = Path("models")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+METRICS_DIR = Path("metrics")
+METRICS_DIR.mkdir(parents=True, exist_ok=True)
+RUNS_CSV = METRICS_DIR / "runs.csv"
+CLASS_NAMES = ["idle", "wave", "shake"]
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Train tiny baseline model and log metrics."
+    )
+    parser.add_argument(
+        "--run-name",
+        default=None,
+        help="Optional run label for metrics/runs.csv (e.g. dense_v1_try3).",
+    )
+    return parser.parse_args()
 
 
 def load_split(name: str) -> tuple[np.ndarray, np.ndarray]:
@@ -19,6 +41,10 @@ def load_split(name: str) -> tuple[np.ndarray, np.ndarray]:
 
 
 def main() -> int:
+    args = parse_args()
+    run_name = args.run_name or f"run_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    safe_run_name = re.sub(r"[^A-Za-z0-9_.-]", "_", run_name)
+
     x_train, y_train = load_split("train")
     x_val, y_val = load_split("val")
     x_test, y_test = load_split("test")
@@ -64,15 +90,59 @@ def main() -> int:
     print(f"Test accuracy: {test_acc:.4f}")
     print(f"Test loss: {test_loss:.4f}")
 
-    keras_path = OUT_DIR / "gesture_model.h5"
+    y_prob = model.predict(x_test, verbose=0)
+    y_pred = np.argmax(y_prob, axis=1)
+    cm = confusion_matrix(y_test, y_pred)
+    report = classification_report(
+        y_test,
+        y_pred,
+        target_names=CLASS_NAMES,
+        output_dict=True,
+        zero_division=0,
+    )
+    macro_f1 = f1_score(y_test, y_pred, average="macro", zero_division=0)
+
+    print("Confusion matrix:")
+    print(cm)
+    print(
+        "Per-class F1:",
+        ", ".join([f"{name}={report[name]['f1-score']:.4f}" for name in CLASS_NAMES]),
+    )
+    print(f"Macro F1: {macro_f1:.4f}")
+
+    keras_path = OUT_DIR / f"{safe_run_name}.h5"
     model.save(keras_path)
     print(f"Saved Keras model: {keras_path}")
 
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
     tflite_model = converter.convert()
-    tflite_path = OUT_DIR / "gesture_model.tflite"
+    tflite_path = OUT_DIR / f"{safe_run_name}.tflite"
     tflite_path.write_bytes(tflite_model)
-    print(f"Saved TFLite model: {tflite_path} ({len(tflite_model)} bytes)")
+    model_size_bytes = len(tflite_model)
+    print(f"Saved TFLite model: {tflite_path} ({model_size_bytes} bytes)")
+
+    run_record = {
+        "run_name": run_name,
+        "timestamp_utc": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "test_accuracy": f"{test_acc:.6f}",
+        "test_loss": f"{test_loss:.6f}",
+        "macro_f1": f"{macro_f1:.6f}",
+        "f1_idle": f"{report['idle']['f1-score']:.6f}",
+        "f1_wave": f"{report['wave']['f1-score']:.6f}",
+        "f1_shake": f"{report['shake']['f1-score']:.6f}",
+        "model_size_bytes": str(model_size_bytes),
+    }
+    write_header = not RUNS_CSV.exists()
+    with RUNS_CSV.open("a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(run_record.keys()))
+        if write_header:
+            writer.writeheader()
+        writer.writerow(run_record)
+    print(f"Appended run metrics ({run_name}): {RUNS_CSV}")
+
+    cm_path = METRICS_DIR / "confusion_matrix.json"
+    cm_path.write_text(json.dumps(cm.tolist(), indent=2), encoding="utf-8")
+    print(f"Wrote confusion matrix: {cm_path}")
 
     return 0
 

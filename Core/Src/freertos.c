@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "gesture_runtime.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,6 +36,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+/* TEMP_PRESENTATION_FALLBACK: set 0 to bypass new runtime while presenting */
+#define GESTURE_RUNTIME_ENABLE 0
 
 /* USER CODE END PD */
 
@@ -95,7 +98,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
+#if GESTURE_RUNTIME_ENABLE
+  GestureRuntime_Init();
+#endif
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -162,11 +167,14 @@ void StartDefaultTask(void *argument)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
-  /* Infinite loop */
+#if GESTURE_RUNTIME_ENABLE
+  GestureRuntime_AITaskLoop();
+#else
   for(;;)
   {
-    osDelay(1);
+    osDelay(100);
   }
+#endif
   /* USER CODE END StartTask02 */
 }
 

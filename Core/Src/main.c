@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "gesture_runtime.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,7 +37,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+/* TEMP_PRESENTATION_FALLBACK: force CSV output back on for screenshots. */
+/* Set 1 to stream CSV for Python dataLogger; 0 for gesture pipeline (no per-sample UART flood). */
+#define SENSOR_CSV_UART_LOG 1
+/* TEMP_PRESENTATION_FALLBACK: disable gesture runtime path temporarily. */
+#define GESTURE_RUNTIME_ENABLE 0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -199,7 +204,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
-/* Day6: UART CSV line — frame_id,ax,ay,az,gx,gy,gz,pot (one row per successful read) */
+/* UART CSV line — frame_id,ax,ay,az,gx,gy,gz,pot (one row = one successful read) */
 HAL_StatusTypeDef Run_Sensor_Acquisition(uint32_t frame_id) {
     uint8_t imu_raw[14];
     int16_t ax, ay, az, gx, gy, gz;
@@ -226,9 +231,15 @@ HAL_StatusTypeDef Run_Sensor_Acquisition(uint32_t frame_id) {
     gy = (int16_t)((imu_raw[10] << 8) | imu_raw[11]);
     gz = (int16_t)((imu_raw[12] << 8) | imu_raw[13]);
 
+#if GESTURE_RUNTIME_ENABLE
+    GestureRuntime_OnSample(ax, ay, az, gx, gy, gz, adc_val);
+#endif
+
+#if SENSOR_CSV_UART_LOG
     printf("%lu,%d,%d,%d,%d,%d,%d,%lu\r\n",
            (unsigned long)frame_id, (int)ax, (int)ay, (int)az, (int)gx, (int)gy, (int)gz,
            (unsigned long)adc_val);
+#endif
     return HAL_OK;
 }
 
