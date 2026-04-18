@@ -1,0 +1,38 @@
+# --- STM32CubeIDE / Eclipse ---
+.metadata/
+# .settings/          # uncomment to ignore IDE prefs (many teams commit this for CubeIDE)
+Debug/
+Release/
+*.launch.bak
+
+# Build products (if any appear outside Debug/)
+*.o
+*.elf
+*.map
+*.bin
+*.hex
+*.list
+*.su
+*.cyclo
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+.env
+
+# --- Large / generated ML artifacts (uncomment if you do not want them in git) ---
+# saveData/
+# processedData/
+# models/*.h5
+# models/*.tflite
+# Core/Inc/modelData.h
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
